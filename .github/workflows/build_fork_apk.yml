@@ -1,0 +1,48 @@
+name: Build fork APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - 'README.md'
+      - 'fastlane/**'
+      - 'meta/**'
+
+jobs:
+  build-fork-apk:
+    # this workflow is only meant for forks, not for the upstream repository
+    if: github.repository != 'DicioTeam/dicio-android'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Make sure Gradle wrapper is legitimate
+        uses: gradle/actions/wrapper-validation@v5
+
+      - name: Set up Java JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: "temurin"
+          cache: 'gradle'
+
+      - name: Use a fixed debug keystore, so that new builds can be installed as updates
+        env:
+          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$DEBUG_KEYSTORE_BASE64" ]; then
+            mkdir -p ~/.android
+            echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
+          else
+            echo "::warning::The DEBUG_KEYSTORE_BASE64 secret is not set, so this APK is signed with a random key and cannot be installed as an update of previous builds"
+          fi
+
+      - name: Build fork APK
+        run: ./gradlew assembleFork --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: dicio-fork
+          path: app/build/outputs/apk/fork/*.apk

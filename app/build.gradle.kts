@@ -61,6 +61,16 @@ android {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
+        // A release-like build signed with the debug key, with a different application id and
+        // name so that it can be installed alongside the official Dicio (e.g. from F-Droid)
+        create("fork") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".fork"
+            versionNameSuffix = "-fork"
+            resValue("string", "app_name", "Dicio Fork")
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
 
     compileOptions {
